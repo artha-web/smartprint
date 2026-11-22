@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { UTApi } from "uploadthing/server";
 import fs from "fs/promises";
 import path from "path";
@@ -31,6 +32,30 @@ if (r2AccountId && r2AccessKeyId && r2SecretAccessKey) {
 // 3. Local filesystem fallback directory for development
 const LOCAL_STORAGE_DIR = path.join(process.cwd(), ".storage");
 
+export function getActiveStorageProvider(): "uploadthing" | "r2" | "local" {
+  if (utApi) return "uploadthing";
+  if (s3Client) return "r2";
+  return "local";
+}
+
+/**
+ * Generates direct S3/R2 presigned URL for single-hop browser uploads
+ */
+export async function getPresignedUploadUrl(
+  key: string,
+  contentType: string
+): Promise<string | null> {
+  if (!s3Client) return null;
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+    ContentType: contentType,
+  });
+
+  return await getSignedUrl(s3Client, command, { expiresIn: 300 }); // 5 minutes
+}
+
 export interface UploadResult {
   storageKey: string;
   fileUrl?: string;
@@ -51,7 +76,6 @@ export async function uploadFile(
       throw new Error(`UploadThing error: ${response.error?.message || "Failed to upload to UploadThing"}`);
     }
 
-    // Use uploadthing: prefix to recognize UploadThing keys
     return {
       storageKey: `uploadthing:${response.data.key}`,
       fileUrl: response.data.url,
@@ -85,7 +109,6 @@ export async function getFile(
   if (key.startsWith("uploadthing:")) {
     const utKey = key.replace("uploadthing:", "");
     try {
-      // UploadThing public CDN URL format
       const fileUrl = `https://utfs.io/f/${utKey}`;
       const res = await fetch(fileUrl);
       if (!res.ok) return null;
@@ -147,7 +170,6 @@ export async function getFile(
 
 /**
  * Permanently deletes the file from storage (UploadThing, R2, or local disk).
- * This empties the UploadThing storage so memory stays completely free!
  */
 export async function deleteFile(key: string): Promise<boolean> {
   // Delete from UploadThing
