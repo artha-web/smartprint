@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateFileContent, sanitizeFilename } from "../src/lib/validation.ts";
+import { validateFileContent, sanitizeFilename, verifyTurnstileToken } from "../src/lib/validation.ts";
 
 test("validateFileContent correctly identifies PDF documents", () => {
   const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x35]); // %PDF-1.5
@@ -44,3 +44,16 @@ test("sanitizeFilename prevents directory traversal and cleans invalid character
   assert.equal(cleaned.includes("?"), false);
   assert.equal(cleaned.endsWith(".pdf"), true);
 });
+
+test("verifyTurnstileToken allows requests when secret key is not configured", async () => {
+  const result = await verifyTurnstileToken(null, "127.0.0.1");
+  assert.equal(result, true);
+});
+
+test("verifyTurnstileToken blocks requests when secret key is set but token is missing", async () => {
+  process.env.TURNSTILE_SECRET_KEY = "dummy_secret_key";
+  const result = await verifyTurnstileToken("", "127.0.0.1");
+  assert.equal(result, false);
+  delete process.env.TURNSTILE_SECRET_KEY;
+});
+

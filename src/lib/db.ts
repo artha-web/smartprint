@@ -37,6 +37,9 @@ export async function ensureDbInitialized() {
       owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       shop_code TEXT NOT NULL UNIQUE,
+      phone TEXT,
+      address TEXT,
+      logo_url TEXT,
       active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -68,6 +71,11 @@ export async function ensureDbInitialized() {
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_shops_code ON shops(shop_code);
   `);
+
+  // Safe non-destructive column migrations for existing shops
+  try { await db.execute("ALTER TABLE shops ADD COLUMN phone TEXT"); } catch {}
+  try { await db.execute("ALTER TABLE shops ADD COLUMN address TEXT"); } catch {}
+  try { await db.execute("ALTER TABLE shops ADD COLUMN logo_url TEXT"); } catch {}
 
   // Auto-seed default admin and shop if the database has 0 users
   try {

@@ -7,10 +7,16 @@ import { Copy, Download, Printer, Check, ExternalLink } from "lucide-react";
 export default function QRClient({
   shopName,
   shopCode,
+  shopPhone,
+  shopAddress,
+  shopLogo,
   uploadUrl,
 }: {
   shopName: string;
   shopCode: string;
+  shopPhone?: string;
+  shopAddress?: string;
+  shopLogo?: string;
   uploadUrl: string;
 }) {
   const [dataUrl, setDataUrl] = useState<string>("");
@@ -84,8 +90,25 @@ export default function QRClient({
               )}
             </div>
 
-            <h3 style={{ marginTop: 16, marginBottom: 4 }}>{shopName}</h3>
-            <p className="muted" style={{ fontSize: 13, marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 16 }}>
+              {shopLogo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={shopLogo}
+                  alt="Shop Logo"
+                  style={{ height: 28, width: "auto", objectFit: "contain" }}
+                />
+              )}
+              <h3 style={{ margin: 0 }}>{shopName}</h3>
+            </div>
+
+            {(shopAddress || shopPhone) && (
+              <p className="muted" style={{ fontSize: 13, margin: "6px 0 0" }}>
+                {shopAddress} {shopPhone && `• ${shopPhone}`}
+              </p>
+            )}
+
+            <p className="muted" style={{ fontSize: 13, margin: "10px 0 20px" }}>
               Permanent URL: {uploadUrl}
             </p>
 
@@ -119,7 +142,7 @@ export default function QRClient({
                 When a customer arrives to print, ask them to scan the QR code and enter their name.
               </li>
               <li>
-                Their document will appear on your dashboard instantly.
+                Their documents appear on your dashboard with an instant audio chime!
               </li>
             </ol>
 
@@ -141,6 +164,14 @@ export default function QRClient({
       <div className="print-poster-container" ref={posterRef}>
         <div className="poster-border">
           <div className="poster-header">
+            {shopLogo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={shopLogo}
+                alt="Shop Logo"
+                style={{ maxHeight: 60, width: "auto", objectFit: "contain", marginBottom: 10 }}
+              />
+            )}
             <h1 className="poster-title">SCAN TO UPLOAD YOUR DOCUMENT</h1>
             <p className="poster-subtitle">Send your files directly to our printer — No WhatsApp needed!</p>
           </div>
@@ -153,6 +184,11 @@ export default function QRClient({
           </div>
 
           <div className="poster-shop-name">{shopName}</div>
+          {(shopAddress || shopPhone) && (
+            <div style={{ fontSize: 15, color: "#334155", fontWeight: 600, margin: "4px 0 8px" }}>
+              {shopAddress} {shopPhone && `• ${shopPhone}`}
+            </div>
+          )}
           <div className="poster-url">{uploadUrl}</div>
 
           <div className="poster-steps">
@@ -162,7 +198,7 @@ export default function QRClient({
             </div>
             <div className="poster-step">
               <span className="step-num">2</span>
-              <span>Enter your name & upload</span>
+              <span>Enter name &amp; upload</span>
             </div>
             <div className="poster-step">
               <span className="step-num">3</span>
@@ -177,7 +213,6 @@ export default function QRClient({
       </div>
 
       <style jsx>{`
-        /* Hide poster in screen mode */
         .print-poster-container {
           display: none;
         }

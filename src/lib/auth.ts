@@ -16,6 +16,9 @@ export interface Shop {
   owner_id: string;
   name: string;
   shop_code: string;
+  phone?: string | null;
+  address?: string | null;
+  logo_url?: string | null;
   active: number;
   created_at: string;
 }
@@ -135,7 +138,7 @@ export async function getSession(): Promise<{ user: User; shop: Shop } | null> {
     sql: `
       SELECT s.id as session_id, s.expires_at, 
              u.id as user_id, u.email, u.name as user_name, u.created_at as user_created_at,
-             sh.id as shop_id, sh.name as shop_name, sh.shop_code, sh.active as shop_active, sh.created_at as shop_created_at
+             sh.id as shop_id, sh.name as shop_name, sh.shop_code, sh.phone as shop_phone, sh.address as shop_address, sh.logo_url as shop_logo, sh.active as shop_active, sh.created_at as shop_created_at
       FROM sessions s
       JOIN users u ON u.id = s.user_id
       LEFT JOIN shops sh ON sh.owner_id = u.id
@@ -163,6 +166,9 @@ export async function getSession(): Promise<{ user: User; shop: Shop } | null> {
     owner_id: user.id,
     name: String(row.shop_name || "My Shop"),
     shop_code: String(row.shop_code || ""),
+    phone: row.shop_phone ? String(row.shop_phone) : null,
+    address: row.shop_address ? String(row.shop_address) : null,
+    logo_url: row.shop_logo ? String(row.shop_logo) : null,
     active: Number(row.shop_active ?? 1),
     created_at: String(row.shop_created_at || ""),
   };

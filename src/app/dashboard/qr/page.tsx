@@ -19,6 +19,9 @@ export default async function QRPage() {
     <QRClient
       shopName={session.shop.name}
       shopCode={session.shop.shop_code}
+      shopPhone={session.shop.phone || undefined}
+      shopAddress={session.shop.address || undefined}
+      shopLogo={session.shop.logo_url || undefined}
       uploadUrl={uploadUrl}
     />
   );

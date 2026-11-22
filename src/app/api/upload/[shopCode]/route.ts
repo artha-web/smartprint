@@ -6,6 +6,7 @@ import {
   validateFileContent,
   sanitizeFilename,
   checkRateLimit,
+  verifyTurnstileToken,
 } from "@/lib/validation";
 
 export async function POST(
@@ -44,6 +45,15 @@ export async function POST(
 
     const formData = await request.formData();
     const customerNameRaw = formData.get("customerName");
+    const turnstileToken = String(formData.get("cf-turnstile-response") || formData.get("turnstileToken") || "");
+
+    const isHuman = await verifyTurnstileToken(turnstileToken, ip);
+    if (!isHuman) {
+      return NextResponse.json(
+        { error: "Security verification failed. Please try again." },
+        { status: 403 }
+      );
+    }
 
     // Validate Customer Name (Required, 2 to 80 chars)
     const customerName = String(customerNameRaw || "").trim();

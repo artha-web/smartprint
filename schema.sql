@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS shops (
   owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   shop_code TEXT NOT NULL UNIQUE,
+  phone TEXT,
+  address TEXT,
+  logo_url TEXT,
   active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

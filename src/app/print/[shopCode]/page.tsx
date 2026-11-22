@@ -14,7 +14,7 @@ export default async function PrintPage({
   const db = getDb();
 
   const result = await db.execute({
-    sql: "SELECT id, name, shop_code FROM shops WHERE shop_code = ? AND active = 1",
+    sql: "SELECT id, name, shop_code, phone, address, logo_url FROM shops WHERE shop_code = ? AND active = 1",
     args: [shopCode],
   });
 
@@ -37,8 +37,18 @@ export default async function PrintPage({
     <>
       <header className="topbar">
         <div className="shell topbar-inner">
-          <div className="brand">
-            Smart<span>Print</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {shop.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={String(shop.logo_url)}
+                alt={String(shop.name)}
+                style={{ height: 36, width: "auto", objectFit: "contain", borderRadius: 4 }}
+              />
+            )}
+            <div className="brand">
+              Smart<span>Print</span>
+            </div>
           </div>
           <span className="pill">Quick Document Upload</span>
         </div>
@@ -47,7 +57,15 @@ export default async function PrintPage({
       <main className="shell page">
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <div className="eyebrow">Document Printing</div>
-          <h1 style={{ marginTop: 4, marginBottom: 8 }}>{String(shop.name)}</h1>
+          <h1 style={{ marginTop: 4, marginBottom: 4 }}>{String(shop.name)}</h1>
+
+          {(shop.address || shop.phone) && (
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 13, color: "#64748b", marginBottom: 12 }}>
+              {shop.address && <span>📍 {String(shop.address)}</span>}
+              {shop.phone && <span>📞 {String(shop.phone)}</span>}
+            </div>
+          )}
+
           <p className="muted" style={{ marginBottom: 24, fontSize: 15 }}>
             Upload your document below. Enter your full name so the shopkeeper can find and print your file at the counter.
           </p>

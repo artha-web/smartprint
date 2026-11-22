@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState, useRef, useEffect } from "react";
+import Script from "next/script";
 import {
   Upload,
   FileText,
@@ -9,9 +10,9 @@ import {
   RefreshCw,
   Image as ImageIcon,
   FileCode,
-  X,
   Eye,
   Trash2,
+  Camera,
 } from "lucide-react";
 
 interface UploadedDoc {
@@ -37,9 +38,13 @@ export default function CustomerUpload({
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([]);
   const [previewFile, setPreviewFile] = useState<{ file: File; url: string; isPdf: boolean; isImage: boolean } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   const MAX_MB = 20;
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   // Cleanup object URLs when preview changes
   useEffect(() => {
@@ -49,6 +54,15 @@ export default function CustomerUpload({
       }
     };
   }, [previewFile]);
+
+  // Turnstile callback
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as unknown as { onTurnstileSuccess?: (token: string) => void }).onTurnstileSuccess = (token: string) => {
+        setTurnstileToken(token);
+      };
+    }
+  }, []);
 
   function handleFilesChange(selectedList: FileList | null) {
     setError("");
@@ -112,7 +126,7 @@ export default function CustomerUpload({
 
     const ext = file.name.toLowerCase();
     const isPdf = ext.endsWith(".pdf") || file.type === "application/pdf";
-    const isImage = file.type.startsWith("image/") || [".png", ".jpg", ".jpeg", ".webp"].some(e => ext.endsWith(e));
+    const isImage = file.type.startsWith("image/") || [".png", ".jpg", ".jpeg", ".webp"].some((e) => ext.endsWith(e));
     const url = URL.createObjectURL(file);
 
     setPreviewFile({ file, url, isPdf, isImage });
@@ -146,11 +160,13 @@ export default function CustomerUpload({
     try {
       const formData = new FormData();
       formData.append("customerName", trimmedName);
+      if (turnstileToken) {
+        formData.append("turnstileToken", turnstileToken);
+      }
       files.forEach((file) => {
         formData.append("files", file);
       });
 
-      // Simulated smooth progress while sending
       const progressTimer = setInterval(() => {
         setUploadProgress((p) => (p < 85 ? p + 15 : p));
       }, 250);
@@ -182,9 +198,8 @@ export default function CustomerUpload({
     setUploadedDocs([]);
     setError("");
     setPreviewFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
   }
 
   function formatSize(bytes: number) {
@@ -258,6 +273,13 @@ export default function CustomerUpload({
 
   return (
     <div className="card">
+      {turnstileSiteKey && (
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+          strategy="lazyOnload"
+        />
+      )}
+
       <form onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="customerName">
@@ -279,11 +301,38 @@ export default function CustomerUpload({
           </span>
         </div>
 
-        {/* Drag & Drop Upload Zone */}
+        {/* Action Buttons: Choose from Files or Scan Document */}
         <div className="field">
-          <label>
-            Select Documents (PDF, Word, Images, TXT) <span style={{ color: "#e11d48" }}>*</span>
-          </label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <label style={{ margin: 0 }}>
+              Select Documents <span style={{ color: "#e11d48" }}>*</span>
+            </label>
+
+            {/* Direct Phone Camera / Document Scanner Mode */}
+            <button
+              type="button"
+              className="btn-camera"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={busy}
+              title="Take a photo of a document or ID card"
+            >
+              <Camera size={15} />
+              Take Photo / Scan
+            </button>
+          </div>
+
+          {/* Hidden Camera Input with capture="environment" for rear camera */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: "none" }}
+            disabled={busy}
+            onChange={(e) => handleFilesChange(e.target.files)}
+          />
+
+          {/* Drag & Drop Upload Zone */}
           <div
             className={`dropzone ${isDragging ? "dragging" : ""}`}
             onDragOver={handleDragOver}
@@ -389,6 +438,18 @@ export default function CustomerUpload({
           </div>
         )}
 
+        {/* Cloudflare Turnstile anti-bot challenge widget (if configured) */}
+        {turnstileSiteKey && (
+          <div style={{ margin: "14px 0", display: "flex", justifyContent: "center" }}>
+            <div
+              className="cf-turnstile"
+              data-sitekey={turnstileSiteKey}
+              data-callback="onTurnstileSuccess"
+              data-theme="light"
+            />
+          </div>
+        )}
+
         {/* Upload Progress Bar */}
         {busy && (
           <div style={{ margin: "18px 0" }}>
@@ -444,7 +505,7 @@ export default function CustomerUpload({
                 onClick={closePreview}
                 style={{ border: 0, background: "transparent", color: "#64748b", cursor: "pointer", padding: 6 }}
               >
-                <X size={20} />
+                ✕
               </button>
             </div>
 
@@ -486,6 +547,24 @@ export default function CustomerUpload({
       )}
 
       <style jsx>{`
+        .btn-camera {
+          border: 1px solid #cbd5e1;
+          background: #f8fafc;
+          color: #1e293b;
+          font-size: 12px;
+          font-weight: 700;
+          padding: 6px 10px;
+          border-radius: 8px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          cursor: pointer;
+          transition: background 0.15s, border-color 0.15s;
+        }
+        .btn-camera:hover {
+          background: #f1f5f9;
+          border-color: #94a3b8;
+        }
         .dragging {
           border-color: #2563eb !important;
           background: #eff6ff !important;
